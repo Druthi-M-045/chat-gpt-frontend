@@ -9,7 +9,10 @@ function App() {
   return (
     <>
       <h1>Hello Appa</h1>
-      
+      <h1 class="text-3xl font-bold underline">
+    Hello world!
+  </h1>
+ 
     </>
   )
 }
