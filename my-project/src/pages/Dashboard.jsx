@@ -20,11 +20,10 @@ const Dashboard = () => {
         const initializeDashboard = async () => {
             const token = localStorage.getItem('access_token');
             if (!token) {
-                // No token? Guest mode.
-                setUser({ username: 'Guest', email: 'guest@local', id: 'guest' });
-                // Try to load guest history
-                const history = localStorage.getItem('chat_history_guest@local');
-                if (history) setSavedChats(JSON.parse(history));
+                // No token? Guest mode (Ephemeral).
+                setUser({ username: 'Guest', email: 'guest@session', id: 'guest' });
+                // Do NOT load shared guest history to prevent leaks between users
+                setSavedChats([]);
                 setIsInitializing(false);
                 return;
             }
@@ -41,22 +40,58 @@ const Dashboard = () => {
                     // Load history specific to this user
                     if (data.email) {
                         const history = localStorage.getItem(`chat_history_${data.email}`);
-                        if (history) setSavedChats(JSON.parse(history));
+                        if (history) {
+                            setSavedChats(JSON.parse(history));
+                        } else {
+                            // Fetch history from backend if local is empty
+                            try {
+                                const historyResponse = await fetch('http://127.0.0.1:8000/history', {
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                if (historyResponse.ok) {
+                                    const backendHistory = await historyResponse.json();
+                                    // Transform flat backend history to sessions
+                                    const transformed = backendHistory.map(h => ({
+                                        id: h.id,
+                                        title: h.input_text.substring(0, 30) + '...',
+                                        messages: [
+                                            { role: 'user', content: h.input_text, timestamp: h.timestamp },
+                                            { role: 'ai', content: h.output_text, timestamp: h.timestamp }
+                                        ]
+                                    }));
+                                    setSavedChats(transformed);
+                                } else {
+                                    setSavedChats([]);
+                                }
+                            } catch (e) {
+                                console.error("Backend history fetch failed", e);
+                                setSavedChats([]);
+                            }
+                        }
+                    } else {
+                        setSavedChats([]);
                     }
                 } else {
-                    // Token invalid? Fallback to Guest.
+                    // Token invalid? Fallback to Guest (Ephemeral).
                     console.warn("Token invalid, switching to Guest");
                     localStorage.removeItem('access_token');
-                    setUser({ username: 'Guest', email: 'guest@local', id: 'guest' });
-                    const history = localStorage.getItem('chat_history_guest@local');
-                    if (history) setSavedChats(JSON.parse(history));
+                    setUser({ username: 'Guest', email: 'guest@session', id: 'guest' });
+                    setSavedChats([]); // Clear history
                 }
             } catch (error) {
                 console.error("Fetch user error (Backend likely down):", error);
+
                 // Backend unreachable? Offline/Guest mode.
-                setUser({ username: 'Offline Guest', email: 'guest@local', id: 'guest' });
-                const history = localStorage.getItem('chat_history_guest@local');
-                if (history) setSavedChats(JSON.parse(history));
+                // We generate a TEMPORARY guest session to avoid showing shared history
+                // or we explicitly clear it if we want strict isolation.
+                // For now, let's use a generic guest but NOT load old guest history to prevent leaks
+                // or allow it but be aware it's shared. 
+                // The user request specifically says "history must not be shown to new person".
+                // So shared guest history violates this if multiple people usage happens.
+
+                // Let's use a session-based guest (no persistence loading for guest)
+                setUser({ username: 'Offline Guest', email: 'guest@session', id: 'guest' });
+                setSavedChats([]); // Start fresh for guest
             } finally {
                 setIsInitializing(false);
             }
@@ -90,13 +125,19 @@ const Dashboard = () => {
         setMessage('');
 
         try {
+            const token = localStorage.getItem('access_token');
             const response = await fetch('http://127.0.0.1:8000/ask', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
                 body: JSON.stringify({ message: finalMessage, system_prompt: systemPrompt }),
             });
 
             const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "AI Request failed");
+
             const aiMsg = { role: 'ai', content: data.response, timestamp: new Date().toISOString() };
             const newHistory = [...chatHistory, userMsg, aiMsg];
             setChatHistory(newHistory);
@@ -202,7 +243,7 @@ const Dashboard = () => {
                             {user?.username?.[0]?.toUpperCase() || 'U'}
                         </div>
                         <div>
-                            <p className="text-sm font-bold text-white">{user?.username || 'Guest'}</p>
+                            <p className="text-sm font-bold text-white">{user?.username || user?.email?.split('@')[0] || 'Guest'}</p>
                             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Pro Plan</p>
                         </div>
                     </div>
