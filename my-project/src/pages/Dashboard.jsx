@@ -20,7 +20,12 @@ const Dashboard = () => {
         const initializeDashboard = async () => {
             const token = localStorage.getItem('access_token');
             if (!token) {
-                navigate('/login');
+                // No token? Guest mode.
+                setUser({ username: 'Guest', email: 'guest@local', id: 'guest' });
+                // Try to load guest history
+                const history = localStorage.getItem('chat_history_guest@local');
+                if (history) setSavedChats(JSON.parse(history));
+                setIsInitializing(false);
                 return;
             }
 
@@ -39,12 +44,19 @@ const Dashboard = () => {
                         if (history) setSavedChats(JSON.parse(history));
                     }
                 } else {
-                    // Token might be invalid
+                    // Token invalid? Fallback to Guest.
+                    console.warn("Token invalid, switching to Guest");
                     localStorage.removeItem('access_token');
-                    navigate('/login');
+                    setUser({ username: 'Guest', email: 'guest@local', id: 'guest' });
+                    const history = localStorage.getItem('chat_history_guest@local');
+                    if (history) setSavedChats(JSON.parse(history));
                 }
             } catch (error) {
-                console.error("Fetch user error:", error);
+                console.error("Fetch user error (Backend likely down):", error);
+                // Backend unreachable? Offline/Guest mode.
+                setUser({ username: 'Offline Guest', email: 'guest@local', id: 'guest' });
+                const history = localStorage.getItem('chat_history_guest@local');
+                if (history) setSavedChats(JSON.parse(history));
             } finally {
                 setIsInitializing(false);
             }
