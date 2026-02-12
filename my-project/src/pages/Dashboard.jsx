@@ -11,18 +11,24 @@ const Dashboard = () => {
     const [editContent, setEditContent] = useState('');
     const [savedChats, setSavedChats] = useState([]);
     const [user, setUser] = useState(null);
+    const [isInitializing, setIsInitializing] = useState(true);
     const chatEndRef = useRef(null);
 
     // Persistence: Load history from localStorage
     // Load User and their specific history
     useEffect(() => {
-        const fetchUser = async () => {
+        const initializeDashboard = async () => {
             const token = localStorage.getItem('access_token');
-            if (!token) return;
+            if (!token) {
+                navigate('/login');
+                return;
+            }
+
             try {
                 const response = await fetch('http://127.0.0.1:8000/me', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+
                 if (response.ok) {
                     const data = await response.json();
                     setUser(data);
@@ -32,13 +38,20 @@ const Dashboard = () => {
                         const history = localStorage.getItem(`chat_history_${data.email}`);
                         if (history) setSavedChats(JSON.parse(history));
                     }
+                } else {
+                    // Token might be invalid
+                    localStorage.removeItem('access_token');
+                    navigate('/login');
                 }
             } catch (error) {
                 console.error("Fetch user error:", error);
+            } finally {
+                setIsInitializing(false);
             }
         };
-        fetchUser();
-    }, []);
+
+        initializeDashboard();
+    }, [navigate]);
 
     // Scroll to bottom when chat updates
     useEffect(() => {
@@ -128,6 +141,17 @@ const Dashboard = () => {
         { id: 'history', label: 'History', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" /></svg> },
         { id: 'profile', label: 'Profile', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeWidth="2" strokeLinecap="round" /></svg> },
     ];
+
+    if (isInitializing) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-[#0f172a] text-white">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-400 font-medium">Loading Dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-screen bg-[#0f172a] text-slate-200 overflow-hidden pt-16">
