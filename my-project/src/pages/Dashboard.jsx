@@ -14,11 +14,8 @@ const Dashboard = () => {
     const chatEndRef = useRef(null);
 
     // Persistence: Load history from localStorage
+    // Load User and their specific history
     useEffect(() => {
-        const history = localStorage.getItem('ai_chat_history');
-        if (history) setSavedChats(JSON.parse(history));
-
-        // Fetch User Info
         const fetchUser = async () => {
             const token = localStorage.getItem('access_token');
             if (!token) return;
@@ -29,6 +26,12 @@ const Dashboard = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setUser(data);
+
+                    // Load history specific to this user
+                    if (data.email) {
+                        const history = localStorage.getItem(`chat_history_${data.email}`);
+                        if (history) setSavedChats(JSON.parse(history));
+                    }
                 }
             } catch (error) {
                 console.error("Fetch user error:", error);
@@ -45,6 +48,9 @@ const Dashboard = () => {
     const handleSignOut = () => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        setUser(null);
+        setChatHistory([]);
+        setSavedChats([]);
         navigate('/login');
     };
 
@@ -71,16 +77,21 @@ const Dashboard = () => {
             setChatHistory(newHistory);
 
             // Auto-save session to history if it's new
+            // Auto-save session to history if it's new
             if (chatHistory.length === 0) {
                 const session = { id: Date.now(), title: finalMessage.substring(0, 30) + '...', messages: newHistory };
                 const updatedSavedChats = [session, ...savedChats.slice(0, 19)];
                 setSavedChats(updatedSavedChats);
-                localStorage.setItem('ai_chat_history', JSON.stringify(updatedSavedChats));
+                if (user?.email) {
+                    localStorage.setItem(`chat_history_${user.email}`, JSON.stringify(updatedSavedChats));
+                }
             } else {
                 // Update current session
                 const updatedSavedChats = savedChats.map((s, i) => i === 0 ? { ...s, messages: newHistory } : s);
                 setSavedChats(updatedSavedChats);
-                localStorage.setItem('ai_chat_history', JSON.stringify(updatedSavedChats));
+                if (user?.email) {
+                    localStorage.setItem(`chat_history_${user.email}`, JSON.stringify(updatedSavedChats));
+                }
             }
         } catch (error) {
             console.error("AI Error:", error);
