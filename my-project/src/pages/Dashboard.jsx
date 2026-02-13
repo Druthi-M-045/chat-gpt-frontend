@@ -29,7 +29,7 @@ const Dashboard = () => {
             }
 
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/me`, {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE}/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -45,7 +45,7 @@ const Dashboard = () => {
                         } else {
                             // Fetch history from backend if local is empty
                             try {
-                                const historyResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/history`, {
+                                const historyResponse = await fetch(`${import.meta.env.VITE_API_BASE}/history`, {
                                     headers: { 'Authorization': `Bearer ${token}` }
                                 });
                                 if (historyResponse.ok) {
@@ -126,7 +126,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/ask`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE}/ask`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -14,7 +14,7 @@ const AskAI = () => {
 
             try {
                 // Get user info to identify history key
-                const userRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/me`, {
+                const userRes = await fetch(`${import.meta.env.VITE_API_BASE}/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (userRes.ok) {
@@ -28,7 +28,7 @@ const AskAI = () => {
                     }
 
                     // Then fetch from backend to sync
-                    const histRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/history`, {
+                    const histRes = await fetch(`${import.meta.env.VITE_API_BASE}/history`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (histRes.ok) {
@@ -62,7 +62,7 @@ const AskAI = () => {
         setMessage('');
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/ask`, {
+            const response = await fetch(`${import.meta.env.VITE_API_BASE}/ask`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
