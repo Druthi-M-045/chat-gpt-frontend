@@ -19,7 +19,7 @@ const SignupPage = () => {
     setStatus({ type: 'loading', message: 'Creating account...' });
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/signup', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ const SignupPage = () => {
           <h2 className="text-3xl font-extrabold text-gray-900">Sign Up</h2>
           <p className="mt-2 text-sm text-gray-600">Enter your details to get started</p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -83,10 +83,9 @@ const SignupPage = () => {
           </div>
 
           {status.message && (
-            <div className={`mt-4 text-center text-sm p-2 rounded ${
-              status.type === 'success' ? 'bg-green-100 text-green-700' : 
-              status.type === 'error' ? 'bg-red-100 text-red-700' : 'text-gray-500'
-            }`}>
+            <div className={`mt-4 text-center text-sm p-2 rounded ${status.type === 'success' ? 'bg-green-100 text-green-700' :
+                status.type === 'error' ? 'bg-red-100 text-red-700' : 'text-gray-500'
+              }`}>
               {status.message}
             </div>
           )}
